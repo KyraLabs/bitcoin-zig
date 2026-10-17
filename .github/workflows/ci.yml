@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  ZIG_VERSION: 0.17.0
+  ZIG_TARBALL: zig-x86_64-linux-0.17.0.tar.xz
+  ZIG_SHA256: 1cbe9df9f27e6b78d14ccbca43b6703a404ef79ef1c463de901d7f088d4e2026
+  CORE_COMMIT: 924f4c4ac78b0cd3b917c694f42c0651a6f3003a
+  CORE_TEST_DATA: ${{ github.workspace }}/bitcoin/src/test/data
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        optimize: [Debug, ReleaseSafe, ReleaseFast]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: bitcoin-zig
+
+      - uses: actions/checkout@v4
+        with:
+          repository: bitcoin/bitcoin
+          ref: ${{ env.CORE_COMMIT }}
+          path: bitcoin
+          sparse-checkout: src/test/data
+
+      - name: Verify Core checkout
+        working-directory: bitcoin
+        run: |
+          test "$(git rev-parse HEAD)" = "$CORE_COMMIT"
+          for f in base58_encode_decode.json bip341_wallet_vectors.json bip352_send_and_receive_vectors.json \
+                   blockfilters.json key_io_invalid.json key_io_valid.json script_tests.json sighash.json \
+                   siphash.json tx_invalid.json tx_valid.json asmap.raw; do
+            test -f "src/test/data/$f" || { echo "missing vector $f"; exit 1; }
+          done
+
+      - name: Install Zig
+        run: |
+          curl -fsSLO "https://ziglang.org/download/$ZIG_VERSION/$ZIG_TARBALL"
+          echo "$ZIG_SHA256  $ZIG_TARBALL" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/zig"
+          tar -xJf "$ZIG_TARBALL" -C "$RUNNER_TEMP/zig" --strip-components=1
+          echo "$RUNNER_TEMP/zig" >> "$GITHUB_PATH"
+
+      - name: Verify Zig version
+        run: test "$(zig version)" = "$ZIG_VERSION"
+
+      - name: Check formatting
+        if: matrix.optimize == 'Debug'
+        working-directory: bitcoin-zig
+        run: zig build fmt
+
+      - name: Build
+        working-directory: bitcoin-zig
+        run: |
+          zig build -Doptimize=${{ matrix.optimize }}
+          zig build run -Doptimize=${{ matrix.optimize }} -- -version
+
+      - name: Test
+        working-directory: bitcoin-zig
+        run: |
+          set -o pipefail
+          zig build test --summary all \
+            -Doptimize=${{ matrix.optimize }} \
+            -Dcore-test-data="$CORE_TEST_DATA" \
+            -Dallow-missing-core-test-data=false 2>&1 | tee test.log
+          if grep -E '[0-9]+ skip' test.log; then
+            echo "unexpected skipped tests"
+            exit 1
+          fi
