@@ -46,6 +46,16 @@ pub fn build(b: *std.Build) void {
 
     const test_filters = b.option([]const []const u8, "test-filter", "Only run tests whose name contains this substring") orelse &.{};
     const test_module = b.option([]const u8, "test-module", "Only run the tests of this module");
+    const core_test_data = b.option([]const u8, "core-test-data", "Path to Bitcoin Core src/test/data") orelse "../bitcoin/src/test/data";
+    const allow_missing_core_test_data = b.option(bool, "allow-missing-core-test-data", "Skip vector tests when the Core data directory is absent (local only)") orelse false;
+
+    const test_options = b.addOptions();
+    test_options.addOptionPathUntracked("core_test_data", if (std.fs.path.isAbsolute(core_test_data))
+        b.graph.cwdRelativePath(core_test_data)
+    else
+        b.path(core_test_data));
+    test_options.addOption(bool, "allow_missing_core_test_data", allow_missing_core_test_data);
+    const test_options_module = test_options.createModule();
 
     var modules: [module_specs.len]*std.Build.Module = undefined;
     for (module_specs, &modules) |spec, *module| {
@@ -56,6 +66,12 @@ pub fn build(b: *std.Build) void {
         });
         for (spec.deps) |dep| {
             module.*.addImport(dep, modules[indexOf(dep).?]);
+        }
+        if (std.mem.eql(u8, spec.name, "test_util")) {
+            module.*.addImport("build_options", test_options_module);
+        } else if (!std.mem.eql(u8, spec.name, "util")) {
+            // Shared by every module's tests; production code must not import it.
+            module.*.addImport("test_util", modules[indexOf("test_util").?]);
         }
     }
 
@@ -74,7 +90,10 @@ pub fn build(b: *std.Build) void {
             .root_module = module,
             .filters = test_filters,
         });
-        test_step.dependOn(&b.addRunArtifact(unit_tests).step);
+        const run_tests = b.addRunArtifact(unit_tests);
+        // Tests read Core vectors the cache cannot track, so they always rerun.
+        run_tests.has_side_effects = true;
+        test_step.dependOn(&run_tests.step);
     }
 
     const exe_options = b.addOptions();
