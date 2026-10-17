@@ -1,0 +1,13 @@
+.{
+    .name = .kyra,
+    .version = "0.0.0",
+    .fingerprint = 0xb1ffb67b13f33531,
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+    },
+}
