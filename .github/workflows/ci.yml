@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          path: kyra
+          path: bitcoin-zig
 
       - uses: actions/checkout@v4
         with:
@@ -53,17 +53,17 @@ jobs:
 
       - name: Check formatting
         if: matrix.optimize == 'Debug'
-        working-directory: kyra
+        working-directory: bitcoin-zig
         run: zig build fmt
 
       - name: Build
-        working-directory: kyra
+        working-directory: bitcoin-zig
         run: |
           zig build -Doptimize=${{ matrix.optimize }}
           zig build run -Doptimize=${{ matrix.optimize }} -- -version
 
       - name: Test
-        working-directory: kyra
+        working-directory: bitcoin-zig
         run: |
           set -o pipefail
           zig build test --summary all \

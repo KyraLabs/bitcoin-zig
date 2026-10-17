@@ -100,7 +100,7 @@ pub fn build(b: *std.Build) void {
     exe_options.addOption([]const u8, "version", manifest.version);
 
     const exe = b.addExecutable(.{
-        .name = "kyra",
+        .name = "bitcoin-zig",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
