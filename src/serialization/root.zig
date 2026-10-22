@@ -16,8 +16,17 @@ pub const writeBool = int.writeBool;
 pub const readArray = int.readArray;
 pub const writeArray = int.writeArray;
 
+const compact_size = @import("compact_size.zig");
+pub const MAX_SIZE = compact_size.MAX_SIZE;
+pub const compactSizeLen = compact_size.compactSizeLen;
+pub const writeCompactSize = compact_size.writeCompactSize;
+pub const readCompactSize = compact_size.readCompactSize;
+pub const readCompactSizeOpts = compact_size.readCompactSizeOpts;
+pub const readCompactSizeAs = compact_size.readCompactSizeAs;
+
 test {
     _ = @import("reader.zig");
     _ = @import("writer.zig");
     _ = int;
+    _ = compact_size;
 }
