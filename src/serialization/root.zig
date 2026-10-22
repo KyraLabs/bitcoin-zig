@@ -32,4 +32,5 @@ test {
     _ = int;
     _ = compact_size;
     _ = @import("size.zig");
+    _ = @import("fuzz.zig");
 }
