@@ -24,9 +24,12 @@ pub const readCompactSize = compact_size.readCompactSize;
 pub const readCompactSizeOpts = compact_size.readCompactSizeOpts;
 pub const readCompactSizeAs = compact_size.readCompactSizeAs;
 
+pub const serializedSize = @import("size.zig").serializedSize;
+
 test {
     _ = @import("reader.zig");
     _ = @import("writer.zig");
     _ = int;
     _ = compact_size;
+    _ = @import("size.zig");
 }
