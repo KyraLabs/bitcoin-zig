@@ -74,3 +74,11 @@ jobs:
             echo "unexpected skipped tests"
             exit 1
           fi
+
+      # Zig 0.17.0 only instruments for fuzzing with the LLVM backend, which Debug does not use.
+      - name: Fuzz
+        if: matrix.optimize == 'ReleaseSafe'
+        working-directory: bitcoin-zig
+        run: |
+          zig build test -Dtest-filter=fuzz -Doptimize=ReleaseSafe --fuzz=100K \
+            -Dcore-test-data="$CORE_TEST_DATA"
